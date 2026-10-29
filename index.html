@@ -5,10 +5,21 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Psychiatric Provider — Find therapists, psychiatrists & group practices</title>
 <meta name="description" content="Psychiatric Provider: find therapists, psychiatrists, and group practices with verified openings. Prototype with sample data.">
-<meta name="theme-color" content="#2f6f62">
+<meta name="theme-color" content="#1f6fa8">
 <style>
 /* ===== THEME ===== */
-:root{--bg:#f4f8f7;--card:#fff;--ink:#1f2d2b;--muted:#5b6b68;--brand:#2f6f62;--brand2:#3d7fa6;--soft:#e3efec;--warn:#9a5b00;--warnbg:#fff4e0;--ok:#1e6b3a;--okbg:#e4f5ea;--line:#d6e2df;--r:12px}
+:root{--bg:#f5f8fb;--card:#fff;--ink:#1c2b3a;--muted:#5a6b7b;--brand:#1f6fa8;--brand2:#13808a;--soft:#e6f1f8;--warn:#9a5b00;--warnbg:#fff4e0;--ok:#1e6b3a;--okbg:#e4f5ea;--line:#d9e3ec;--r:10px}
+.card{box-shadow:0 1px 3px #1c2b3a14}
+article.card:hover{box-shadow:0 4px 14px #1c2b3a1f}
+h1,h2,h3{color:#16324f;letter-spacing:-.01em}
+header{box-shadow:0 1px 0 var(--line)}
+.hero{background:linear-gradient(135deg,#1f6fa8,#13808a)!important;color:#fff}
+.hero h1{color:#fff}
+.hero .sentence select{border-color:#fff}
+.hero .chip{border-color:#fff}
+.hero .btn{background:#fff;color:#1f6fa8}
+.hero .btn.alt{background:transparent;color:#fff;border-color:#fff}
+.hero .sub{opacity:.92;margin:-.4rem 0 1rem}
 *{box-sizing:border-box}
 body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
 a{color:var(--brand2)}
@@ -71,6 +82,7 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:2rem 1rem}
     <button type="button" class="chip" id="navSearchBtn" data-run-search>Search</button>
     <a href="#/specialty/emdr/frisco" data-nav="/specialty/emdr/frisco">EMDR</a>
     <a href="#/specialty/play-therapy/mckinney" data-nav="/specialty/play-therapy/mckinney">Play therapy</a>
+    <a href="#/search?state=in" data-nav="/search?state=in">Indiana</a>
     <a href="#/saved" data-nav="/saved">Saved (<span id="savedCount">0</span>)</a>
     <a href="#/join" data-nav="/join">For practices</a>
   </nav>
@@ -87,14 +99,27 @@ const STALE_DAYS = 30;
 
 /* ===== SAMPLE DATA (fictional) ===== */
 const SPECIALTIES = {"emdr":"EMDR","play-therapy":"Play therapy","trauma":"Trauma","adhd":"ADHD","couples":"Couples","anxiety":"Anxiety","depression":"Depression","medication":"Medication management"};
-const CITIES = {"frisco":"Frisco","southlake":"Southlake","mckinney":"McKinney","lewisville":"Lewisville"};
-const INSURERS = ["Aetna","Blue Cross Blue Shield","Cigna","UnitedHealthcare","Medicaid","Self-pay"];
+const STATES = {"tx":"Texas","in":"Indiana"};
+const CITY_DATA = {
+ frisco:["Frisco","tx"],southlake:["Southlake","tx"],mckinney:["McKinney","tx"],lewisville:["Lewisville","tx"],
+ dallas:["Dallas","tx"],"fort-worth":["Fort Worth","tx"],austin:["Austin","tx"],houston:["Houston","tx"],"san-antonio":["San Antonio","tx"],
+ indianapolis:["Indianapolis","in"],carmel:["Carmel","in"],fishers:["Fishers","in"],bloomington:["Bloomington","in"],"fort-wayne":["Fort Wayne","in"]};
+const CITIES = Object.fromEntries(Object.entries(CITY_DATA).map(([k,v])=>[k,v[0]]));
+const stateOf = city => (CITY_DATA[city]||[])[1]||"";
+const place = city => `${CITIES[city]||""}, ${stateOf(city).toUpperCase()}`;
+const citiesIn = st => Object.fromEntries(Object.entries(CITIES).filter(([k])=>!st||stateOf(k)===st));
+const cityOpts=(sel,blank,st)=>`<option value="">${blank}</option>`+Object.entries(STATES).filter(([k])=>!st||k===st).map(([sk,sv])=>`<optgroup label="${sv}">`+Object.entries(citiesIn(sk)).map(([k,v])=>`<option value="${k}"${k===sel?" selected":""}>${v}</option>`).join("")+`</optgroup>`).join("");
+const INSURERS = ["Aetna","Blue Cross Blue Shield","Cigna","UnitedHealthcare","Medicaid","Anthem","Self-pay"];
 
 const PRACTICES = [
  {id:"clean-page",name:"Clean Page Counseling Group",city:"frisco",about:"Group practice focused on trauma recovery, EMDR, and family work.",insurance:["Aetna","Cigna","Blue Cross Blue Shield","Self-pay"],phone:"(555) 010-2001",intake:true},
  {id:"willow-path",name:"Willow Path Family Therapy",city:"mckinney",about:"Child, teen, and family therapy with a dedicated play therapy room.",insurance:["Aetna","Medicaid","UnitedHealthcare","Self-pay"],phone:"(555) 010-2002",intake:true},
  {id:"lakeside-mind",name:"Lakeside Mind & Medication",city:"lewisville",about:"Psychiatric evaluations, medication management, and therapy under one roof.",insurance:["Blue Cross Blue Shield","UnitedHealthcare","Aetna"],phone:"(555) 010-2003",intake:true},
- {id:"oak-harbor",name:"Oak Harbor Counseling",city:"southlake",about:"Couples and individual therapy for adults.",insurance:["Cigna","Self-pay"],phone:"(555) 010-2004",intake:true}
+ {id:"oak-harbor",name:"Oak Harbor Counseling",city:"southlake",about:"Couples and individual therapy for adults.",insurance:["Cigna","Self-pay"],phone:"(555) 010-2004",intake:true},
+ {id:"bluebonnet",name:"Bluebonnet Behavioral Health",city:"austin",about:"Therapy and psychiatry for adults and teens in Central Texas.",insurance:["Blue Cross Blue Shield","Aetna","UnitedHealthcare","Self-pay"],phone:"(555) 010-2005",intake:true},
+ {id:"bayou-city",name:"Bayou City Counseling Collective",city:"houston",about:"Trauma-informed therapy with bilingual clinicians.",insurance:["Cigna","Medicaid","Aetna","Self-pay"],phone:"(555) 010-2006",intake:true},
+ {id:"circle-city",name:"Circle City Therapy Group",city:"indianapolis",about:"Indianapolis group practice for anxiety, ADHD, and family work.",insurance:["Anthem","Cigna","UnitedHealthcare","Medicaid","Self-pay"],phone:"(555) 010-2007",intake:true},
+ {id:"hamilton-psych",name:"Hamilton County Psychiatry",city:"carmel",about:"Psychiatric evaluation and medication management serving Carmel and Fishers.",insurance:["Anthem","Aetna","UnitedHealthcare"],phone:"(555) 010-2008",intake:true}
 ];
 
 const CLINICIANS = [
@@ -108,6 +133,19 @@ const CLINICIANS = [
  {id:"grace-lin",name:"Grace Lin",cred:"PMHNP-BC",practice:"lakeside-mind",city:"lewisville",specialties:["medication","anxiety"],insurance:["Aetna","Blue Cross Blue Shield"],langs:["English","Mandarin"],telehealth:true,nextOpening:"2026-11-06",lastConfirmed:"2026-07-20",bio:"Psychiatric nurse practitioner for anxiety and mood."},
  {id:"tom-becker",name:"Tom Becker",cred:"LMFT",practice:"oak-harbor",city:"southlake",specialties:["couples","depression"],insurance:["Cigna","Self-pay"],langs:["English"],telehealth:true,nextOpening:"2026-11-03",lastConfirmed:"2026-10-24",bio:"Gottman-informed couples therapy."},
  {id:"rachel-stein",name:"Rachel Stein",cred:"LPC",practice:null,city:"southlake",specialties:["emdr","trauma","anxiety"],insurance:["Aetna","UnitedHealthcare"],langs:["English"],telehealth:true,nextOpening:"2026-11-08",lastConfirmed:"2026-10-19",bio:"Solo practice; EMDR intensives for single-incident trauma."},
+ {id:"elena-ruiz",name:"Elena Ruiz",cred:"LPC",practice:"bluebonnet",city:"austin",specialties:["anxiety","depression","trauma"],insurance:["Blue Cross Blue Shield","Aetna","Self-pay"],langs:["English","Spanish"],telehealth:true,nextOpening:"2026-11-05",lastConfirmed:"2026-10-26",bio:"Calm, collaborative therapy for anxiety and life transitions."},
+ {id:"james-whit",name:"Dr. James Whitaker",cred:"MD, Psychiatrist",practice:"bluebonnet",city:"austin",specialties:["medication","adhd"],insurance:["UnitedHealthcare","Blue Cross Blue Shield"],langs:["English"],telehealth:true,nextOpening:"2026-11-12",lastConfirmed:"2026-10-20",bio:"Adult and adolescent psychiatry."},
+ {id:"keisha-grant",name:"Keisha Grant",cred:"LCSW",practice:"bayou-city",city:"houston",specialties:["trauma","emdr","depression"],insurance:["Cigna","Medicaid","Self-pay"],langs:["English"],telehealth:true,nextOpening:"2026-11-03",lastConfirmed:"2026-10-27",bio:"EMDR and trauma recovery for adults."},
+ {id:"oscar-mendez",name:"Oscar Mendez",cred:"LMFT",practice:"bayou-city",city:"houston",specialties:["couples","play-therapy"],insurance:["Aetna","Medicaid"],langs:["English","Spanish"],telehealth:false,nextOpening:"2026-11-18",lastConfirmed:"2026-09-05",bio:"Family and couples therapy; bilingual."},
+ {id:"nina-patel",name:"Nina Patel",cred:"LPC",practice:null,city:"dallas",specialties:["anxiety","adhd"],insurance:["Aetna","Cigna"],langs:["English","Gujarati"],telehealth:true,nextOpening:"2026-11-07",lastConfirmed:"2026-10-22",bio:"Solo practice for young professionals."},
+ {id:"cody-ray",name:"Cody Ray",cred:"LPC",practice:null,city:"fort-worth",specialties:["trauma","depression"],insurance:["Blue Cross Blue Shield","Self-pay"],langs:["English"],telehealth:true,nextOpening:"2026-11-09",lastConfirmed:"2026-10-18",bio:"Veterans and first responders."},
+ {id:"sofia-lozano",name:"Sofia Lozano",cred:"LPC, RPT",practice:null,city:"san-antonio",specialties:["play-therapy","anxiety"],insurance:["Medicaid","UnitedHealthcare"],langs:["English","Spanish"],telehealth:false,nextOpening:"2026-11-04",lastConfirmed:"2026-10-24",bio:"Play therapy for children 3–12."},
+ {id:"megan-hart",name:"Megan Hart",cred:"LMHC",practice:"circle-city",city:"indianapolis",specialties:["anxiety","adhd","emdr"],insurance:["Anthem","Cigna","Self-pay"],langs:["English"],telehealth:true,nextOpening:"2026-11-02",lastConfirmed:"2026-10-28",bio:"Indiana LMHC; EMDR and ADHD coaching."},
+ {id:"andre-cole",name:"Andre Coleman",cred:"LCSW",practice:"circle-city",city:"indianapolis",specialties:["play-therapy","trauma"],insurance:["Medicaid","UnitedHealthcare"],langs:["English"],telehealth:false,nextOpening:null,lastConfirmed:"2026-10-23",bio:"Kids, teens, and family trauma work."},
+ {id:"lauren-kim",name:"Lauren Kim",cred:"PMHNP-BC",practice:"hamilton-psych",city:"carmel",specialties:["medication","anxiety","depression"],insurance:["Anthem","Aetna"],langs:["English","Korean"],telehealth:true,nextOpening:"2026-11-06",lastConfirmed:"2026-10-25",bio:"Medication management for mood and anxiety."},
+ {id:"ben-foster",name:"Dr. Ben Foster",cred:"MD, Psychiatrist",practice:"hamilton-psych",city:"fishers",specialties:["medication","adhd"],insurance:["Anthem","UnitedHealthcare"],langs:["English"],telehealth:true,nextOpening:"2026-11-19",lastConfirmed:"2026-08-15",bio:"Adult ADHD and mood disorders."},
+ {id:"ruth-adler",name:"Ruth Adler",cred:"LMFT",practice:null,city:"bloomington",specialties:["couples","depression"],insurance:["Anthem","Self-pay"],langs:["English"],telehealth:true,nextOpening:"2026-11-10",lastConfirmed:"2026-10-21",bio:"Couples therapy near IU campus."},
+ {id:"tyler-quinn",name:"Tyler Quinn",cred:"LMHC",practice:null,city:"fort-wayne",specialties:["trauma","emdr","anxiety"],insurance:["Anthem","Cigna","Medicaid"],langs:["English"],telehealth:true,nextOpening:"2026-11-03",lastConfirmed:"2026-10-26",bio:"EMDR for adults in Northeast Indiana."},
  {id:"marco-silva",name:"Marco Silva",cred:"LCSW",practice:null,city:"frisco",specialties:["adhd","play-therapy"],insurance:["Medicaid","Self-pay"],langs:["English","Portuguese","Spanish"],telehealth:false,nextOpening:null,lastConfirmed:"2026-08-01",bio:"Solo practice for kids and teens with ADHD."}
 ];
 
@@ -155,7 +193,7 @@ function clinicianCard(c){
   return `<article class="card"><div class="row">
    <div class="avatar" style="background:${color(c.id)}" aria-hidden="true">${initials(c.name)}</div>
    <div style="flex:1"><h3 style="margin:0"><a href="#/clinician/${c.id}">${esc(c.name)}</a>, <span class="muted">${esc(c.cred)}</span></h3>
-   <div class="muted">${CITIES[c.city]}, TX · ${p?`<a href="#/practice/${p.id}">${esc(p.name)}</a>`:"Solo practice"}${c.telehealth?" · Telehealth":""}</div>
+   <div class="muted">${place(c.city)} · ${p?`<a href="#/practice/${p.id}">${esc(p.name)}</a>`:"Solo practice"}${c.telehealth?" · Telehealth":""}</div>
    <div>${c.specialties.map(s=>`<span class="tag">${SPECIALTIES[s]}</span>`).join("")}</div>
    <div class="muted">Insurance: ${c.insurance.join(", ")}</div>
    ${openingBadge(c)}
@@ -166,7 +204,7 @@ function practiceCard(p){
   const t = teamOf(p);
   const specs=[...new Set(t.flatMap(c=>c.specialties))];
   return `<article class="card"><h3 style="margin:0"><a href="#/practice/${p.id}">${esc(p.name)}</a></h3>
-   <div class="muted">Group practice · ${CITIES[p.city]}, TX · ${t.length} clinicians</div>
+   <div class="muted">Group practice · ${place(p.city)} · ${t.length} clinicians</div>
    <div>${specs.map(s=>`<span class="tag">${SPECIALTIES[s]}</span>`).join("")}</div>
    <div class="muted">Insurance: ${p.insurance.join(", ")}</div>
    ${practiceOpenings(p)}
@@ -177,7 +215,7 @@ function practiceCard(p){
 function filterClinicians(q){
   return CLINICIANS.filter(c=>
     (!q.specialty||c.specialties.includes(q.specialty)) &&
-    (!q.city||c.city===q.city) &&
+    (!q.state||stateOf(c.city)===q.state) && (!q.city||c.city===q.city) &&
     (!q.insurance||c.insurance.includes(q.insurance)) &&
     (!q.type||(q.type==="group"?!!c.practice:!c.practice)) &&
     (!q.open||isOpen(c)) &&
@@ -188,7 +226,7 @@ function filterPractices(q){
   if(q.type==="solo") return [];
   return PRACTICES.filter(p=>{
     const t=teamOf(p);
-    return (!q.city||p.city===q.city)&&(!q.insurance||p.insurance.includes(q.insurance))&&
+    return (!q.state||stateOf(p.city)===q.state)&&(!q.city||p.city===q.city)&&(!q.insurance||p.insurance.includes(q.insurance))&&
       (!q.specialty||t.some(c=>c.specialties.includes(q.specialty)))&&(!q.open||t.some(isOpen));
   });
 }
@@ -200,13 +238,14 @@ const insOpts=(sel,blank)=>`<option value="">${blank}</option>`+INSURERS.map(i=>
 const views = {
 /* DIFFERENTIATOR 3: ONE-SENTENCE SEARCH + QUICK CHIPS */
 home(){
-  return `<section class="hero"><h1 style="margin-top:0">Find care that actually has room for you.</h1>
+  return `<section class="hero"><h1 style="margin-top:0">Find a therapist or psychiatrist in Texas or Indiana</h1><p class="sub">Verified openings, group practices, and one request that reaches whoever is free.</p>
   <form id="homeSearch" class="sentence" aria-label="Sentence search">
    <div class="line">I'm looking for therapy focused on
     <select name="specialty" aria-label="Specialty">${opts(SPECIALTIES,"","any specialty")}</select>
    </div>
    <div class="line">in
-    <select name="city" aria-label="City">${opts(CITIES,"","any DFW city")}</select>
+    <select name="state" aria-label="State">${opts(STATES,"","Texas or Indiana")}</select>
+    <select name="city" aria-label="City">${cityOpts("","any city")}</select>
    </div>
    <div class="line">with a
     <select name="type" aria-label="Practice type"><option value="">solo or group</option><option value="group">group</option><option value="solo">solo</option></select>
@@ -224,7 +263,8 @@ home(){
   <section class="card"><h2>Why ${esc(BRAND)} is different</h2><ul>
    <li><b>Verified openings</b> — every listing shows its next opening and when it was last confirmed. Anything older than ${STALE_DAYS} days is flagged.</li>
    <li><b>Group practices first-class</b> — see the whole team, and send one request that routes to whoever fits and is free.</li>
-   <li><b>Specialty pages by city</b> — <a href="#/specialty/emdr/frisco" data-nav="/specialty/emdr/frisco">EMDR in Frisco</a>, <a href="#/specialty/play-therapy/mckinney" data-nav="/specialty/play-therapy/mckinney">Play therapy in McKinney</a>.</li></ul></section>`;
+   <li><b>Specialty pages by city</b> — <a href="#/specialty/emdr/frisco" data-nav="/specialty/emdr/frisco">EMDR in Frisco</a>, <a href="#/specialty/play-therapy/mckinney" data-nav="/specialty/play-therapy/mckinney">Play therapy in McKinney</a>, <a href="#/specialty/anxiety/indianapolis" data-nav="/specialty/anxiety/indianapolis">Anxiety in Indianapolis</a>.</li></ul></section>
+  <section class="card"><h2>Browse by city</h2>${Object.entries(STATES).map(([sk,sv])=>`<h3>${sv}</h3><div class="chips">${Object.entries(citiesIn(sk)).map(([k,v])=>`<a class="chip" href="#/search?state=${sk}&city=${k}" data-nav="/search?state=${sk}&city=${k}">${v}</a>`).join("")}</div>`).join("")}</section>`;
 },
 search(){
   const q=parseQuery(), mode=q.view==="practices"?"practices":"clinicians";
@@ -232,7 +272,8 @@ search(){
   return homeBar()+`<h1>Search results</h1>
   <p class="muted">Showing matches for your filters. Change any filter to update the list.</p><form id="filterForm" class="card filters" aria-label="Filters">
    <div><label for="f-s">Specialty</label><select id="f-s" name="specialty">${opts(SPECIALTIES,q.specialty,"Any")}</select></div>
-   <div><label for="f-c">City</label><select id="f-c" name="city">${opts(CITIES,q.city,"Any")}</select></div>
+   <div><label for="f-st">State</label><select id="f-st" name="state">${opts(STATES,q.state,"Any")}</select></div>
+   <div><label for="f-c">City</label><select id="f-c" name="city">${cityOpts(q.city,"Any",q.state)}</select></div>
    <div><label for="f-i">Insurance</label><select id="f-i" name="insurance">${insOpts(q.insurance,"Any")}</select></div>
    <div><label for="f-t">Practice type</label><select id="f-t" name="type"><option value="">Any</option><option value="group"${q.type==="group"?" selected":""}>Group</option><option value="solo"${q.type==="solo"?" selected":""}>Solo</option></select></div>
    <div><label><input type="checkbox" name="open" value="1"${q.open?" checked":""} style="width:auto"> Verified openings only</label>
@@ -253,7 +294,7 @@ clinician(id){
   const p=practiceOf(c);
   const practiceBtn = p ? `<button type="button" class="btn alt sm" data-nav="/practice/${p.id}" onclick="navigate('/practice/${p.id}',{});return false;">View practice</button>` : "";
   return `${back(practiceBtn)}<article class="card"><div class="row"><div class="avatar" style="background:${color(c.id)};width:96px;height:96px" aria-hidden="true">${initials(c.name)}</div>
-   <div style="flex:1"><h1 style="margin:0">${esc(c.name)}</h1><div class="muted">${esc(c.cred)} · ${CITIES[c.city]}, TX · ${p?`Part of <a href="#/practice/${p.id}" data-nav="/practice/${p.id}">${esc(p.name)}</a>`:"Solo practice"}</div>
+   <div style="flex:1"><h1 style="margin:0">${esc(c.name)}</h1><div class="muted">${esc(c.cred)} · ${place(c.city)} · ${p?`Part of <a href="#/practice/${p.id}" data-nav="/practice/${p.id}">${esc(p.name)}</a>`:"Solo practice"}</div>
    ${openingBadge(c)}<p>${esc(c.bio)}</p>
    <h3>Specialties</h3>${c.specialties.map(s=>`<span class="tag">${SPECIALTIES[s]}</span>`).join("")}
    <h3>Insurance</h3><p>${c.insurance.join(", ")}</p><h3>Languages</h3><p>${c.langs.join(", ")}</p>
@@ -269,7 +310,7 @@ practice(id){
   const p=PRACTICES.find(x=>x.id===id); if(!p) return views.notfound();
   const t=teamOf(p);
   return `${back()}<article class="card"><h1 style="margin:0">${esc(p.name)}</h1>
-   <div class="muted">Group practice · ${CITIES[p.city]}, TX · ${esc(p.phone)}</div><p>${esc(p.about)}</p>
+   <div class="muted">Group practice · ${place(p.city)} · ${esc(p.phone)}</div><p>${esc(p.about)}</p>
    ${practiceOpenings(p)}<p class="muted">Insurance accepted: ${p.insurance.join(", ")}</p>
    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
      <a class="btn" href="#/request/practice/${p.id}" data-nav="/request/practice/${p.id}">One request — match me to whoever fits</a>
@@ -283,13 +324,14 @@ specialty(spec,city){
   if(!SPECIALTIES[spec]||!CITIES[city]) return views.notfound();
   const cl=filterClinicians({specialty:spec,city});
   const pr=filterPractices({specialty:spec,city});
-  const near=filterClinicians({specialty:spec}).filter(c=>c.city!==city);
-  return homeBar()+`<h1>${SPECIALTIES[spec]} in ${CITIES[city]}, TX</h1>
-  <div class="chips">${Object.entries(CITIES).map(([k,v])=>`<a class="chip${k===city?" on":""}" href="#/specialty/${spec}/${k}">${v}</a>`).join("")}</div>
-  <div class="chips">${["emdr","play-therapy"].map(s=>`<a class="chip${s===spec?" on":""}" href="#/specialty/${s}/${city}">${SPECIALTIES[s]}</a>`).join("")}</div>
+  const st=stateOf(city);
+  const near=filterClinicians({specialty:spec,state:st}).filter(c=>c.city!==city);
+  return homeBar()+`<h1>${SPECIALTIES[spec]} in ${place(city)}</h1>
+  <div class="chips">${Object.entries(citiesIn(st)).map(([k,v])=>`<a class="chip${k===city?" on":""}" href="#/specialty/${spec}/${k}">${v}</a>`).join("")}</div>
+  <div class="chips">${Object.keys(SPECIALTIES).map(s=>`<a class="chip${s===spec?" on":""}" href="#/specialty/${s}/${city}">${SPECIALTIES[s]}</a>`).join("")}</div>
   ${pr.length?`<h2>Group practices</h2>${pr.map(practiceCard).join("")}`:""}
   <h2>Clinicians</h2>${cl.map(clinicianCard).join("")||empty()}
-  ${near.length?`<h2>Nearby in DFW</h2>${near.map(clinicianCard).join("")}`:""}
+  ${near.length?`<h2>Elsewhere in ${STATES[st]}</h2>${near.map(clinicianCard).join("")}`:""}
   ${pageFoot()}`;
 },
 /* DIFFERENTIATOR 5: SHARED INTAKE / ROUTING */
@@ -335,7 +377,7 @@ join(){
   <div class="note"><b>DRAFT — pricing not final.</b> Idea under discussion: one practice plan priced per active clinician, with solo listings available. Nothing here is an offer.</div>
   <form id="joinForm">
    <label for="j-p">Practice name</label><input id="j-p" name="practice" required>
-   <label for="j-c">City</label><select id="j-c" name="city" required>${opts(CITIES,"","Choose…")}</select>
+   <label for="j-c">City</label><select id="j-c" name="city" required>${cityOpts("","Choose…")}</select>
    <label for="j-n">Number of clinicians</label><input id="j-n" name="size" type="number" min="1" required>
    <label for="j-who">Contact name</label><input id="j-who" name="contact" required>
    <label for="j-e">Work email</label><input id="j-e" name="email" type="email" required>
@@ -524,6 +566,8 @@ window.navigate = navigate;
 
 function goSearch(form){
   const o = collectForm(form);
+  if(o.city && !o.state) o.state = stateOf(o.city);
+  if(o.city && o.state && stateOf(o.city)!==o.state) delete o.city;
   if(ROUTE_QUERY.view) o.view = ROUTE_QUERY.view;
   navigate("/search", o);
 }
@@ -574,8 +618,8 @@ document.addEventListener("click", function(e){
   const nav = t.closest("[data-nav]");
   if(nav){
     e.preventDefault();
-    const path = nav.getAttribute("data-nav") || "/";
-    navigate(path, {});
+    const [np, nq] = (nav.getAttribute("data-nav") || "/").split("?");
+    navigate(np || "/", Object.fromEntries(new URLSearchParams(nq || "")));
     return;
   }
 
@@ -612,7 +656,9 @@ document.addEventListener("submit", function(e){
 
 document.addEventListener("change", function(e){
   const form = e.target && e.target.closest && e.target.closest("#filterForm");
-  if(form) goSearch(form);
+  if(!form) return;
+  if(e.target.name==="state"){ const c=form.querySelector('select[name="city"]'); if(c && c.value && stateOf(c.value)!==e.target.value && e.target.value) c.value=""; }
+  goSearch(form);
 }, true);
 
 document.title = BRAND + " — Find therapists, psychiatrists & group practices";
