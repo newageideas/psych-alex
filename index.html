@@ -70,6 +70,11 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:2rem 1rem}
 .page-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin:1.25rem 0 .5rem}
 .btn.danger{background:#fff;color:#9d1612;border:2px solid #9d1612}
 @media(max-width:600px){.row{flex-direction:column}.sentence{font-size:1rem}.sentence .line{gap:.35rem}}
+.how{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.4rem;padding:0;margin:.5rem 0 .75rem;font-size:.92rem}
+.how li{background:rgba(255,255,255,.75);border:1px solid #cfe3ea;border-radius:8px;padding:.45rem .6rem}
+.livematch{display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;align-items:end;margin:.5rem 0 1rem;padding:.75rem;border:1px solid #cfe3ea;border-radius:10px;background:#fff}
+.livematch label{display:block;font-size:.8rem;font-weight:600}
+@media(max-width:560px){.livematch{grid-template-columns:1fr 1fr}.livematch .btn{grid-column:1/-1}.how{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -108,7 +113,7 @@ const stateOf = city => (CITY_DATA[city]||[])[1]||"";
 const place = city => `${CITIES[city]||""}, ${stateOf(city).toUpperCase()}`;
 const citiesIn = st => Object.fromEntries(Object.entries(CITIES).filter(([k])=>!st||stateOf(k)===st));
 const cityOpts=(sel,blank,st)=>`<option value="">${blank}</option>`+Object.entries(STATES).filter(([k])=>!st||k===st).map(([sk,sv])=>`<optgroup label="${sv}">`+Object.entries(citiesIn(sk)).map(([k,v])=>`<option value="${k}"${k===sel?" selected":""}>${v}</option>`).join("")+`</optgroup>`).join("");
-const INSURERS = ["Aetna","Blue Cross Blue Shield","Cigna","UnitedHealthcare","Medicaid","Anthem","Self-pay"];
+let INSURERS = [];
 
 const PRACTICES = [
  {id:"clean-page",name:"Clean Page Counseling Group",city:"frisco",about:"Group practice focused on trauma recovery, EMDR, and family work.",insurance:["Aetna","Cigna","Blue Cross Blue Shield","Self-pay"],phone:"(555) 010-2001",intake:true},
@@ -244,11 +249,23 @@ function toQuery(o){return new URLSearchParams(Object.entries(o).filter(([,v])=>
 const opts=(obj,sel,blank)=>`<option value="">${blank}</option>`+Object.entries(obj).map(([k,v])=>`<option value="${k}"${k===sel?" selected":""}>${v}</option>`).join("");
 const insOpts=(sel,blank)=>`<option value="">${blank}</option>`+INSURERS.map(i=>`<option${i===sel?" selected":""}>${i}</option>`).join("");
 
+/* Insurance options derived from the scrubbed Texas provider data */
+INSURERS = [...new Set([...CLINICIANS,...PRACTICES].flatMap(x=>x.insurance))].sort((a,b)=>a==="Self-pay"?1:b==="Self-pay"?-1:a.localeCompare(b));
+function liveMatchCount(){const f=document.getElementById("liveMatch");if(!f)return;const q={specialty:f.specialty.value,insurance:f.insurance.value};const n=filterClinicians(q).length,m=filterPractices(q).length;document.getElementById("lmCount").textContent=`${n} clinician${n===1?"":"s"} · ${m} group practice${m===1?"":"s"} match`;}
+function runLiveMatch(e){if(e)e.preventDefault();const f=document.getElementById("liveMatch");navigate("/search",{specialty:f.specialty.value,insurance:f.insurance.value});}
+window.liveMatchCount=liveMatchCount;window.runLiveMatch=runLiveMatch;
 /* ===== VIEWS ===== */
 const views = {
 /* DIFFERENTIATOR 3: ONE-SENTENCE SEARCH + QUICK CHIPS */
 home(){
   return `<section class="hero"><h1 style="margin-top:0">Find a therapist or psychiatrist in Texas</h1><p class="sub">Verified openings, group practices, and one request that reaches whoever is free.</p>
+  <ol class="how" aria-label="How it works"><li><b>1. Search</b> by specialty, insurance, and city.</li><li><b>2. See verified openings</b> — confirmed dates, not guesses.</li><li><b>3. Send one request</b> — it reaches whoever in the practice is free.</li></ol>
+  <form id="liveMatch" class="livematch" aria-label="Filter by insurance and specialty" onsubmit="runLiveMatch(event)">
+   <div><label for="lm-s">Specialty</label><select id="lm-s" name="specialty" onchange="liveMatchCount()">${opts(SPECIALTIES,"","Any specialty")}</select></div>
+   <div><label for="lm-i">Insurance</label><select id="lm-i" name="insurance" onchange="liveMatchCount()">${insOpts("","Any insurance")}</select></div>
+   <button type="submit" class="btn">Show matches</button>
+   <p id="lmCount" class="muted" aria-live="polite" style="grid-column:1/-1;margin:0">${CLINICIANS.length} clinicians · ${PRACTICES.length} group practices match</p>
+  </form>
   <form id="homeSearch" class="sentence" aria-label="Sentence search">
    <div class="line">I'm looking for therapy focused on
     <select name="specialty" aria-label="Specialty">${opts(SPECIALTIES,"","any specialty")}</select>

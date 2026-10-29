@@ -70,6 +70,11 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:2rem 1rem}
 .page-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin:1.25rem 0 .5rem}
 .btn.danger{background:#fff;color:#9d1612;border:2px solid #9d1612}
 @media(max-width:600px){.row{flex-direction:column}.sentence{font-size:1rem}.sentence .line{gap:.35rem}}
+.how{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.4rem;padding:0;margin:.5rem 0 .75rem;font-size:.92rem}
+.how li{background:rgba(255,255,255,.75);border:1px solid #cfe3ea;border-radius:8px;padding:.45rem .6rem}
+.livematch{display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;align-items:end;margin:.5rem 0 1rem;padding:.75rem;border:1px solid #cfe3ea;border-radius:10px;background:#fff}
+.livematch label{display:block;font-size:.8rem;font-weight:600}
+@media(max-width:560px){.livematch{grid-template-columns:1fr 1fr}.livematch .btn{grid-column:1/-1}.how{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -82,7 +87,6 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:2rem 1rem}
     <button type="button" class="chip" id="navSearchBtn" data-run-search>Search</button>
     <a href="#/specialty/emdr/frisco" data-nav="/specialty/emdr/frisco">EMDR</a>
     <a href="#/specialty/play-therapy/mckinney" data-nav="/specialty/play-therapy/mckinney">Play therapy</a>
-    <a href="#/search?state=in" data-nav="/search?state=in">Indiana</a>
     <a href="#/saved" data-nav="/saved">Saved (<span id="savedCount">0</span>)</a>
     <a href="#/join" data-nav="/join">For practices</a>
   </nav>
@@ -99,17 +103,17 @@ const STALE_DAYS = 30;
 
 /* ===== SAMPLE DATA (fictional) ===== */
 const SPECIALTIES = {"emdr":"EMDR","play-therapy":"Play therapy","trauma":"Trauma","adhd":"ADHD","couples":"Couples","anxiety":"Anxiety","depression":"Depression","medication":"Medication management"};
-const STATES = {"tx":"Texas","in":"Indiana"};
+const STATES = {"tx":"Texas"};
 const CITY_DATA = {
  frisco:["Frisco","tx"],southlake:["Southlake","tx"],mckinney:["McKinney","tx"],lewisville:["Lewisville","tx"],
  dallas:["Dallas","tx"],"fort-worth":["Fort Worth","tx"],austin:["Austin","tx"],houston:["Houston","tx"],"san-antonio":["San Antonio","tx"],
- indianapolis:["Indianapolis","in"],carmel:["Carmel","in"],fishers:["Fishers","in"],bloomington:["Bloomington","in"],"fort-wayne":["Fort Wayne","in"]};
+ };
 const CITIES = Object.fromEntries(Object.entries(CITY_DATA).map(([k,v])=>[k,v[0]]));
 const stateOf = city => (CITY_DATA[city]||[])[1]||"";
 const place = city => `${CITIES[city]||""}, ${stateOf(city).toUpperCase()}`;
 const citiesIn = st => Object.fromEntries(Object.entries(CITIES).filter(([k])=>!st||stateOf(k)===st));
 const cityOpts=(sel,blank,st)=>`<option value="">${blank}</option>`+Object.entries(STATES).filter(([k])=>!st||k===st).map(([sk,sv])=>`<optgroup label="${sv}">`+Object.entries(citiesIn(sk)).map(([k,v])=>`<option value="${k}"${k===sel?" selected":""}>${v}</option>`).join("")+`</optgroup>`).join("");
-const INSURERS = ["Aetna","Blue Cross Blue Shield","Cigna","UnitedHealthcare","Medicaid","Anthem","Self-pay"];
+let INSURERS = [];
 
 const PRACTICES = [
  {id:"clean-page",name:"Clean Page Counseling Group",city:"frisco",about:"Group practice focused on trauma recovery, EMDR, and family work.",insurance:["Aetna","Cigna","Blue Cross Blue Shield","Self-pay"],phone:"(555) 010-2001",intake:true},
@@ -118,8 +122,9 @@ const PRACTICES = [
  {id:"oak-harbor",name:"Oak Harbor Counseling",city:"southlake",about:"Couples and individual therapy for adults.",insurance:["Cigna","Self-pay"],phone:"(555) 010-2004",intake:true},
  {id:"bluebonnet",name:"Bluebonnet Behavioral Health",city:"austin",about:"Therapy and psychiatry for adults and teens in Central Texas.",insurance:["Blue Cross Blue Shield","Aetna","UnitedHealthcare","Self-pay"],phone:"(555) 010-2005",intake:true},
  {id:"bayou-city",name:"Bayou City Counseling Collective",city:"houston",about:"Trauma-informed therapy with bilingual clinicians.",insurance:["Cigna","Medicaid","Aetna","Self-pay"],phone:"(555) 010-2006",intake:true},
- {id:"circle-city",name:"Circle City Therapy Group",city:"indianapolis",about:"Indianapolis group practice for anxiety, ADHD, and family work.",insurance:["Anthem","Cigna","UnitedHealthcare","Medicaid","Self-pay"],phone:"(555) 010-2007",intake:true},
- {id:"hamilton-psych",name:"Hamilton County Psychiatry",city:"carmel",about:"Psychiatric evaluation and medication management serving Carmel and Fishers.",insurance:["Anthem","Aetna","UnitedHealthcare"],phone:"(555) 010-2008",intake:true}
+ {"id": "trinity-trail", "name": "Trinity Trail Counseling", "city": "fort-worth", "about": "Trauma and EMDR group serving Tarrant County.", "insurance": ["Blue Cross Blue Shield", "Aetna", "Self-pay"], "phone": "(555) 010-2012", "intake": true, "founding": false},
+ {"id": "alamo-heights", "name": "Alamo Heights Psychiatry & Therapy", "city": "san-antonio", "about": "Medication management plus therapy, bilingual staff.", "insurance": ["UnitedHealthcare", "Medicaid", "Aetna"], "phone": "(555) 010-2013", "intake": true, "founding": false},
+ {"id": "uptown-mind", "name": "Uptown Mind Collective", "city": "dallas", "about": "Anxiety, ADHD, and couples care for Dallas professionals.", "insurance": ["Aetna", "Cigna", "UnitedHealthcare", "Self-pay"], "phone": "(555) 010-2014", "intake": true, "founding": false}
 ];
 
 const CLINICIANS = [
@@ -140,13 +145,23 @@ const CLINICIANS = [
  {id:"nina-patel",name:"Nina Patel",cred:"LPC",practice:null,city:"dallas",specialties:["anxiety","adhd"],insurance:["Aetna","Cigna"],langs:["English","Gujarati"],telehealth:true,nextOpening:"2026-11-07",lastConfirmed:"2026-10-22",bio:"Solo practice for young professionals."},
  {id:"cody-ray",name:"Cody Ray",cred:"LPC",practice:null,city:"fort-worth",specialties:["trauma","depression"],insurance:["Blue Cross Blue Shield","Self-pay"],langs:["English"],telehealth:true,nextOpening:"2026-11-09",lastConfirmed:"2026-10-18",bio:"Veterans and first responders."},
  {id:"sofia-lozano",name:"Sofia Lozano",cred:"LPC, RPT",practice:null,city:"san-antonio",specialties:["play-therapy","anxiety"],insurance:["Medicaid","UnitedHealthcare"],langs:["English","Spanish"],telehealth:false,nextOpening:"2026-11-04",lastConfirmed:"2026-10-24",bio:"Play therapy for children 3–12."},
- {id:"megan-hart",name:"Megan Hart",cred:"LMHC",practice:"circle-city",city:"indianapolis",specialties:["anxiety","adhd","emdr"],insurance:["Anthem","Cigna","Self-pay"],langs:["English"],telehealth:true,nextOpening:"2026-11-02",lastConfirmed:"2026-10-28",bio:"Indiana LMHC; EMDR and ADHD coaching."},
- {id:"andre-cole",name:"Andre Coleman",cred:"LCSW",practice:"circle-city",city:"indianapolis",specialties:["play-therapy","trauma"],insurance:["Medicaid","UnitedHealthcare"],langs:["English"],telehealth:false,nextOpening:null,lastConfirmed:"2026-10-23",bio:"Kids, teens, and family trauma work."},
- {id:"lauren-kim",name:"Lauren Kim",cred:"PMHNP-BC",practice:"hamilton-psych",city:"carmel",specialties:["medication","anxiety","depression"],insurance:["Anthem","Aetna"],langs:["English","Korean"],telehealth:true,nextOpening:"2026-11-06",lastConfirmed:"2026-10-25",bio:"Medication management for mood and anxiety."},
- {id:"ben-foster",name:"Dr. Ben Foster",cred:"MD, Psychiatrist",practice:"hamilton-psych",city:"fishers",specialties:["medication","adhd"],insurance:["Anthem","UnitedHealthcare"],langs:["English"],telehealth:true,nextOpening:"2026-11-19",lastConfirmed:"2026-08-15",bio:"Adult ADHD and mood disorders."},
- {id:"ruth-adler",name:"Ruth Adler",cred:"LMFT",practice:null,city:"bloomington",specialties:["couples","depression"],insurance:["Anthem","Self-pay"],langs:["English"],telehealth:true,nextOpening:"2026-11-10",lastConfirmed:"2026-10-21",bio:"Couples therapy near IU campus."},
- {id:"tyler-quinn",name:"Tyler Quinn",cred:"LMHC",practice:null,city:"fort-wayne",specialties:["trauma","emdr","anxiety"],insurance:["Anthem","Cigna","Medicaid"],langs:["English"],telehealth:true,nextOpening:"2026-11-03",lastConfirmed:"2026-10-26",bio:"EMDR for adults in Northeast Indiana."},
- {id:"marco-silva",name:"Marco Silva",cred:"LCSW",practice:null,city:"frisco",specialties:["adhd","play-therapy"],insurance:["Medicaid","Self-pay"],langs:["English","Portuguese","Spanish"],telehealth:false,nextOpening:null,lastConfirmed:"2026-08-01",bio:"Solo practice for kids and teens with ADHD."}
+ {id:"marco-silva",name:"Marco Silva",cred:"LCSW",practice:null,city:"frisco",specialties:["adhd","play-therapy"],insurance:["Medicaid","Self-pay"],langs:["English","Portuguese","Spanish"],telehealth:false,nextOpening:null,lastConfirmed:"2026-08-01",bio:"Solo practice for kids and teens with ADHD."},
+ {"id": "rosa-nakamura", "name": "Rosa Nakamura", "cred": "LPC", "practice": "trinity-trail", "city": "fort-worth", "specialties": ["couples", "anxiety", "adhd"], "insurance": ["Cigna", "UnitedHealthcare", "Blue Cross Blue Shield"], "langs": ["English", "Spanish"], "telehealth": true, "nextOpening": null, "lastConfirmed": "2026-07-22", "bio": "Couples therapy for communication, trust, and conflict. Practical tools for anxiety, panic, and overthinking."},
+ {"id": "ethan-ortega", "name": "Ethan Ortega", "cred": "LCSW", "practice": "trinity-trail", "city": "fort-worth", "specialties": ["trauma", "medication", "depression"], "insurance": ["Aetna", "Blue Cross Blue Shield", "UnitedHealthcare"], "langs": ["English"], "telehealth": true, "nextOpening": "2026-11-21", "lastConfirmed": "2026-10-16", "bio": "Trauma-informed care for adults rebuilding after hard seasons. Medication evaluation and ongoing management."},
+ {"id": "mei-tran", "name": "Mei Tran", "cred": "LMFT", "practice": "trinity-trail", "city": "fort-worth", "specialties": ["emdr", "adhd", "anxiety"], "insurance": ["Medicaid", "UnitedHealthcare", "Self-pay"], "langs": ["English", "Spanish"], "telehealth": true, "nextOpening": "2026-11-05", "lastConfirmed": "2026-10-20", "bio": "EMDR for trauma and stuck memories, paced at your speed. ADHD support: evaluation referrals, routines, and focus skills."},
+ {"id": "owen-thornbury", "name": "Owen Thornbury", "cred": "LPC-S", "practice": "alamo-heights", "city": "san-antonio", "specialties": ["adhd", "medication", "play-therapy"], "insurance": ["Aetna", "Cigna", "Self-pay"], "langs": ["English", "Spanish"], "telehealth": true, "nextOpening": null, "lastConfirmed": "2026-10-22", "bio": "ADHD support: evaluation referrals, routines, and focus skills. Medication evaluation and ongoing management."},
+ {"id": "lydia-castillo", "name": "Lydia Castillo", "cred": "LMHC", "practice": "alamo-heights", "city": "san-antonio", "specialties": ["emdr", "medication", "play-therapy"], "insurance": ["Medicaid", "UnitedHealthcare", "Blue Cross Blue Shield"], "langs": ["English", "Spanish"], "telehealth": false, "nextOpening": "2026-11-13", "lastConfirmed": "2026-10-21", "bio": "EMDR for trauma and stuck memories, paced at your speed. Medication evaluation and ongoing management."},
+ {"id": "diego-fairbanks", "name": "Diego Fairbanks", "cred": "PMHNP-BC", "practice": "alamo-heights", "city": "san-antonio", "specialties": ["medication", "anxiety"], "insurance": ["UnitedHealthcare", "Self-pay", "Cigna"], "langs": ["English", "Spanish"], "telehealth": false, "nextOpening": null, "lastConfirmed": "2026-08-24", "bio": "Medication evaluation and ongoing management. Practical tools for anxiety, panic, and overthinking."},
+ {"id": "hazel-rinaldi", "name": "Dr. Hazel Rinaldi", "cred": "MD, Psychiatrist", "practice": "uptown-mind", "city": "dallas", "specialties": ["medication", "adhd"], "insurance": ["Medicaid", "Aetna", "Blue Cross Blue Shield"], "langs": ["English"], "telehealth": true, "nextOpening": "2026-11-18", "lastConfirmed": "2026-10-25", "bio": "Medication evaluation and ongoing management. ADHD support: evaluation referrals, routines, and focus skills."},
+ {"id": "malik-ramos", "name": "Malik Ramos", "cred": "LPC Associate", "practice": "uptown-mind", "city": "dallas", "specialties": ["couples", "anxiety", "emdr"], "insurance": ["Self-pay", "Cigna", "Medicaid"], "langs": ["English"], "telehealth": true, "nextOpening": "2026-11-13", "lastConfirmed": "2026-10-22", "bio": "Couples therapy for communication, trust, and conflict. Practical tools for anxiety, panic, and overthinking."},
+ {"id": "brooke-sutton", "name": "Dr. Brooke Sutton", "cred": "PsyD, Psychologist", "practice": "uptown-mind", "city": "dallas", "specialties": ["adhd", "couples", "play-therapy"], "insurance": ["Blue Cross Blue Shield", "UnitedHealthcare", "Self-pay"], "langs": ["English"], "telehealth": false, "nextOpening": "2026-11-17", "lastConfirmed": "2026-10-14", "bio": "ADHD support: evaluation referrals, routines, and focus skills. Couples therapy for communication, trust, and conflict."},
+ {"id": "simone-delgado", "name": "Simone Delgado", "cred": "LMFT", "practice": "bluebonnet", "city": "austin", "specialties": ["medication", "adhd", "anxiety"], "insurance": ["Aetna", "Blue Cross Blue Shield", "Medicaid"], "langs": ["English"], "telehealth": true, "nextOpening": "2026-11-02", "lastConfirmed": "2026-08-26", "bio": "Medication evaluation and ongoing management. ADHD support: evaluation referrals, routines, and focus skills."},
+ {"id": "wesley-pryor", "name": "Wesley Pryor", "cred": "LPC-S", "practice": "bayou-city", "city": "houston", "specialties": ["medication", "anxiety", "trauma"], "insurance": ["Blue Cross Blue Shield", "Medicaid", "Self-pay"], "langs": ["English"], "telehealth": true, "nextOpening": null, "lastConfirmed": "2026-10-25", "bio": "Medication evaluation and ongoing management. Practical tools for anxiety, panic, and overthinking."},
+ {"id": "paige-winslow", "name": "Paige Winslow", "cred": "LMHC", "practice": "lakeside-mind", "city": "lewisville", "specialties": ["trauma", "adhd", "play-therapy"], "insurance": ["Blue Cross Blue Shield", "Aetna", "Cigna"], "langs": ["English", "Spanish"], "telehealth": true, "nextOpening": "2026-11-18", "lastConfirmed": "2026-09-11", "bio": "Trauma-informed care for adults rebuilding after hard seasons. ADHD support: evaluation referrals, routines, and focus skills."},
+ {"id": "claire-castillo", "name": "Claire Castillo", "cred": "LCSW", "practice": null, "city": "fort-worth", "specialties": ["play-therapy", "depression", "medication"], "insurance": ["Self-pay", "Cigna", "Blue Cross Blue Shield"], "langs": ["English"], "telehealth": true, "nextOpening": "2026-11-06", "lastConfirmed": "2026-10-17", "bio": "Play therapy for kids 3\u201312 with parent check-ins. Warm, steady therapy for depression and burnout."},
+ {"id": "marcus-fairbanks", "name": "Marcus Fairbanks", "cred": "LMFT", "practice": null, "city": "mckinney", "specialties": ["medication", "play-therapy", "anxiety"], "insurance": ["Blue Cross Blue Shield", "Self-pay", "UnitedHealthcare"], "langs": ["English"], "telehealth": true, "nextOpening": "2026-11-14", "lastConfirmed": "2026-10-17", "bio": "Medication evaluation and ongoing management. Play therapy for kids 3\u201312 with parent check-ins."},
+ {"id": "leah-rinaldi", "name": "Leah Rinaldi", "cred": "LPC-S", "practice": null, "city": "lewisville", "specialties": ["anxiety", "emdr", "trauma"], "insurance": ["Medicaid", "UnitedHealthcare", "Self-pay"], "langs": ["English", "Spanish"], "telehealth": false, "nextOpening": "2026-11-14", "lastConfirmed": "2026-10-23", "bio": "Practical tools for anxiety, panic, and overthinking. EMDR for trauma and stuck memories, paced at your speed."},
+ {"id": "isaac-ramos", "name": "Isaac Ramos", "cred": "LMHC", "practice": null, "city": "san-antonio", "specialties": ["play-therapy", "depression", "medication"], "insurance": ["Aetna", "Self-pay", "Cigna"], "langs": ["English"], "telehealth": false, "nextOpening": "2026-11-26", "lastConfirmed": "2026-07-27", "bio": "Play therapy for kids 3\u201312 with parent check-ins. Warm, steady therapy for depression and burnout."}
 ];
 
 /* ===== STORAGE (localStorage only) ===== */
@@ -234,17 +249,29 @@ function toQuery(o){return new URLSearchParams(Object.entries(o).filter(([,v])=>
 const opts=(obj,sel,blank)=>`<option value="">${blank}</option>`+Object.entries(obj).map(([k,v])=>`<option value="${k}"${k===sel?" selected":""}>${v}</option>`).join("");
 const insOpts=(sel,blank)=>`<option value="">${blank}</option>`+INSURERS.map(i=>`<option${i===sel?" selected":""}>${i}</option>`).join("");
 
+/* Insurance options derived from the scrubbed Texas provider data */
+INSURERS = [...new Set([...CLINICIANS,...PRACTICES].flatMap(x=>x.insurance))].sort((a,b)=>a==="Self-pay"?1:b==="Self-pay"?-1:a.localeCompare(b));
+function liveMatchCount(){const f=document.getElementById("liveMatch");if(!f)return;const q={specialty:f.specialty.value,insurance:f.insurance.value};const n=filterClinicians(q).length,m=filterPractices(q).length;document.getElementById("lmCount").textContent=`${n} clinician${n===1?"":"s"} · ${m} group practice${m===1?"":"s"} match`;}
+function runLiveMatch(e){if(e)e.preventDefault();const f=document.getElementById("liveMatch");navigate("/search",{specialty:f.specialty.value,insurance:f.insurance.value});}
+window.liveMatchCount=liveMatchCount;window.runLiveMatch=runLiveMatch;
 /* ===== VIEWS ===== */
 const views = {
 /* DIFFERENTIATOR 3: ONE-SENTENCE SEARCH + QUICK CHIPS */
 home(){
-  return `<section class="hero"><h1 style="margin-top:0">Find a therapist or psychiatrist in Texas or Indiana</h1><p class="sub">Verified openings, group practices, and one request that reaches whoever is free.</p>
+  return `<section class="hero"><h1 style="margin-top:0">Find a therapist or psychiatrist in Texas</h1><p class="sub">Verified openings, group practices, and one request that reaches whoever is free.</p>
+  <ol class="how" aria-label="How it works"><li><b>1. Search</b> by specialty, insurance, and city.</li><li><b>2. See verified openings</b> — confirmed dates, not guesses.</li><li><b>3. Send one request</b> — it reaches whoever in the practice is free.</li></ol>
+  <form id="liveMatch" class="livematch" aria-label="Filter by insurance and specialty" onsubmit="runLiveMatch(event)">
+   <div><label for="lm-s">Specialty</label><select id="lm-s" name="specialty" onchange="liveMatchCount()">${opts(SPECIALTIES,"","Any specialty")}</select></div>
+   <div><label for="lm-i">Insurance</label><select id="lm-i" name="insurance" onchange="liveMatchCount()">${insOpts("","Any insurance")}</select></div>
+   <button type="submit" class="btn">Show matches</button>
+   <p id="lmCount" class="muted" aria-live="polite" style="grid-column:1/-1;margin:0">${CLINICIANS.length} clinicians · ${PRACTICES.length} group practices match</p>
+  </form>
   <form id="homeSearch" class="sentence" aria-label="Sentence search">
    <div class="line">I'm looking for therapy focused on
     <select name="specialty" aria-label="Specialty">${opts(SPECIALTIES,"","any specialty")}</select>
    </div>
    <div class="line">in
-    <select name="state" aria-label="State">${opts(STATES,"","Texas or Indiana")}</select>
+    <select name="state" aria-label="State">${opts(STATES,"","Texas")}</select>
     <select name="city" aria-label="City">${cityOpts("","any city")}</select>
    </div>
    <div class="line">with a
@@ -263,7 +290,7 @@ home(){
   <section class="card"><h2>Why ${esc(BRAND)} is different</h2><ul>
    <li><b>Verified openings</b> — every listing shows its next opening and when it was last confirmed. Anything older than ${STALE_DAYS} days is flagged.</li>
    <li><b>Group practices first-class</b> — see the whole team, and send one request that routes to whoever fits and is free.</li>
-   <li><b>Specialty pages by city</b> — <a href="#/specialty/emdr/frisco" data-nav="/specialty/emdr/frisco">EMDR in Frisco</a>, <a href="#/specialty/play-therapy/mckinney" data-nav="/specialty/play-therapy/mckinney">Play therapy in McKinney</a>, <a href="#/specialty/anxiety/indianapolis" data-nav="/specialty/anxiety/indianapolis">Anxiety in Indianapolis</a>.</li></ul></section>
+   <li><b>Specialty pages by city</b> — <a href="#/specialty/emdr/frisco" data-nav="/specialty/emdr/frisco">EMDR in Frisco</a>, <a href="#/specialty/play-therapy/mckinney" data-nav="/specialty/play-therapy/mckinney">Play therapy in McKinney</a>.</li></ul></section>
   <section class="card"><h2>Browse by city</h2>${Object.entries(STATES).map(([sk,sv])=>`<h3>${sv}</h3><div class="chips">${Object.entries(citiesIn(sk)).map(([k,v])=>`<a class="chip" href="#/search?state=${sk}&city=${k}" data-nav="/search?state=${sk}&city=${k}">${v}</a>`).join("")}</div>`).join("")}</section>`;
 },
 search(){
