@@ -82,7 +82,6 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:2rem 1rem}
     <button type="button" class="chip" id="navSearchBtn" data-run-search>Search</button>
     <a href="#/specialty/emdr/frisco" data-nav="/specialty/emdr/frisco">EMDR</a>
     <a href="#/specialty/play-therapy/mckinney" data-nav="/specialty/play-therapy/mckinney">Play therapy</a>
-    <a href="#/search?state=in" data-nav="/search?state=in">Indiana</a>
     <a href="#/saved" data-nav="/saved">Saved (<span id="savedCount">0</span>)</a>
     <a href="#/join" data-nav="/join">For practices</a>
   </nav>
@@ -214,7 +213,7 @@ function clinicianCard(c){
 function practiceCard(p){
   const t = teamOf(p);
   const specs=[...new Set(t.flatMap(c=>c.specialties))];
-  return `<article class="card"><h3 style="margin:0"><a href="#/practice/${p.id}">${esc(p.name)}</a>${p.founding?` <span class="tag" style="background:#fbf1d6;color:#7a5a00;border-color:#e5c770">★ Indiana founding member</span>`:""}</h3>
+  return `<article class="card"><h3 style="margin:0"><a href="#/practice/${p.id}">${esc(p.name)}</a></h3>
    <div class="muted">Group practice · ${place(p.city)} · ${t.length} clinicians</div>
    <div>${specs.map(s=>`<span class="tag">${SPECIALTIES[s]}</span>`).join("")}</div>
    <div class="muted">Insurance: ${p.insurance.join(", ")}</div>
