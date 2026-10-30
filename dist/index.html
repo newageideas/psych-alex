@@ -227,12 +227,16 @@ function practiceCard(p){
 }
 
 /* ===== SEARCH / FILTER LOGIC ===== */
+/* Provider type (Psychology Today style): MD/DO/PMHNP/NP = psychiatrist (med management); everyone else = therapist */
+const kindOf=c=>/\b(MD|DO|PMHNP|APRN|NP)\b|Psychiatrist/i.test(c.cred)?"psychiatrist":"therapist";
+const CARE={therapist:"Therapist",psychiatrist:"Psychiatrist"};
 function filterClinicians(q){
   return CLINICIANS.filter(c=>
     (!q.specialty||c.specialties.includes(q.specialty)) &&
     (!q.state||stateOf(c.city)===q.state) && (!q.city||c.city===q.city) &&
     (!q.insurance||c.insurance.includes(q.insurance)) &&
     (!q.type||(q.type==="group"?!!c.practice:!c.practice)) &&
+    (!q.care||kindOf(c)===q.care) &&
     (!q.open||isOpen(c)) &&
     (!q.tele||c.telehealth)
   ).sort((a,b)=>(isOpen(b)-isOpen(a))||((a.nextOpening||"9")>(b.nextOpening||"9")?1:-1));
@@ -242,7 +246,7 @@ function filterPractices(q){
   return PRACTICES.filter(p=>{
     const t=teamOf(p);
     return (!q.state||stateOf(p.city)===q.state)&&(!q.city||p.city===q.city)&&(!q.insurance||p.insurance.includes(q.insurance))&&
-      (!q.specialty||t.some(c=>c.specialties.includes(q.specialty)))&&(!q.open||t.some(isOpen));
+      (!q.specialty||t.some(c=>c.specialties.includes(q.specialty)))&&(!q.open||t.some(isOpen))&&(!q.care||t.some(c=>kindOf(c)===q.care));
   });
 }
 function toQuery(o){return new URLSearchParams(Object.entries(o).filter(([,v])=>v)).toString()}
@@ -251,32 +255,30 @@ const insOpts=(sel,blank)=>`<option value="">${blank}</option>`+INSURERS.map(i=>
 
 /* Insurance options derived from the scrubbed Texas provider data */
 INSURERS = [...new Set([...CLINICIANS,...PRACTICES].flatMap(x=>x.insurance))].sort((a,b)=>a==="Self-pay"?1:b==="Self-pay"?-1:a.localeCompare(b));
-function liveMatchCount(){const f=document.getElementById("liveMatch");if(!f)return;const q={specialty:f.specialty.value,insurance:f.insurance.value};const n=filterClinicians(q).length,m=filterPractices(q).length;document.getElementById("lmCount").textContent=`${n} clinician${n===1?"":"s"} · ${m} group practice${m===1?"":"s"} match`;}
-function runLiveMatch(e){if(e)e.preventDefault();const f=document.getElementById("liveMatch");navigate("/search",{specialty:f.specialty.value,insurance:f.insurance.value});}
+function liveMatchCount(){const f=document.getElementById("liveMatch");if(!f)return;const q={care:f.care.value,specialty:f.specialty.value};const n=filterClinicians(q).length,m=filterPractices(q).length;document.getElementById("lmCount").textContent=`${n} clinician${n===1?"":"s"} · ${m} group practice${m===1?"":"s"} match`;}
+function runLiveMatch(e){if(e)e.preventDefault();const f=document.getElementById("liveMatch");navigate("/search",{care:f.care.value,specialty:f.specialty.value});}
 window.liveMatchCount=liveMatchCount;window.runLiveMatch=runLiveMatch;
 /* ===== VIEWS ===== */
 const views = {
 /* DIFFERENTIATOR 3: ONE-SENTENCE SEARCH + QUICK CHIPS */
 home(){
   return `<section class="hero"><h1 style="margin-top:0">Find a therapist or psychiatrist in Texas</h1><p class="sub">Verified openings, group practices, and one request that reaches whoever is free.</p>
-  <ol class="how" aria-label="How it works"><li><b>1. Search</b> by specialty, insurance, and city.</li><li><b>2. See verified openings</b> — confirmed dates, not guesses.</li><li><b>3. Send one request</b> — it reaches whoever in the practice is free.</li></ol>
-  <form id="liveMatch" class="livematch" aria-label="Filter by insurance and specialty" onsubmit="runLiveMatch(event)">
+  <ol class="how" aria-label="How it works"><li><b>1. Search</b> for a therapist or psychiatrist by specialty, city, and insurance.</li><li><b>2. See verified openings</b> — confirmed dates, not guesses.</li><li><b>3. Send one request</b> — it reaches whoever in the practice is free.</li></ol>
+  <form id="liveMatch" class="livematch" aria-label="Filter by provider type and specialty" onsubmit="runLiveMatch(event)">
    <div><label for="lm-s">Specialty</label><select id="lm-s" name="specialty" onchange="liveMatchCount()">${opts(SPECIALTIES,"","Any specialty")}</select></div>
-   <div><label for="lm-i">Insurance</label><select id="lm-i" name="insurance" onchange="liveMatchCount()">${insOpts("","Any insurance")}</select></div>
+   <div><label for="lm-c">Provider type</label><select id="lm-c" name="care" onchange="liveMatchCount()">${opts(CARE,"","Therapist or psychiatrist")}</select></div>
    <button type="submit" class="btn">Show matches</button>
    <p id="lmCount" class="muted" aria-live="polite" style="grid-column:1/-1;margin:0">${CLINICIANS.length} clinicians · ${PRACTICES.length} group practices match</p>
   </form>
   <form id="homeSearch" class="sentence" aria-label="Sentence search">
-   <div class="line">I'm looking for therapy focused on
+   <div class="line">I'm looking for a
+    <select name="care" aria-label="Provider type">${opts(CARE,"","therapist or psychiatrist")}</select>
+    focused on
     <select name="specialty" aria-label="Specialty">${opts(SPECIALTIES,"","any specialty")}</select>
    </div>
    <div class="line">in
     <select name="state" aria-label="State">${opts(STATES,"","Texas")}</select>
     <select name="city" aria-label="City">${cityOpts("","any city")}</select>
-   </div>
-   <div class="line">with a
-    <select name="type" aria-label="Practice type"><option value="">solo or group</option><option value="group">group</option><option value="solo">solo</option></select>
-    practice
    </div>
    <div class="line">that takes
     <select name="insurance" aria-label="Insurance">${insOpts("","any insurance")}</select>.
@@ -302,6 +304,7 @@ search(){
    <div><label for="f-st">State</label><select id="f-st" name="state">${opts(STATES,q.state,"Any")}</select></div>
    <div><label for="f-c">City</label><select id="f-c" name="city">${cityOpts(q.city,"Any",q.state)}</select></div>
    <div><label for="f-i">Insurance</label><select id="f-i" name="insurance">${insOpts(q.insurance,"Any")}</select></div>
+   <div><label for="f-k">Provider type</label><select id="f-k" name="care">${opts(CARE,q.care,"Any")}</select></div>
    <div><label for="f-t">Practice type</label><select id="f-t" name="type"><option value="">Any</option><option value="group"${q.type==="group"?" selected":""}>Group</option><option value="solo"${q.type==="solo"?" selected":""}>Solo</option></select></div>
    <div><label><input type="checkbox" name="open" value="1"${q.open?" checked":""} style="width:auto"> Verified openings only</label>
    <label><input type="checkbox" name="tele" value="1"${q.tele?" checked":""} style="width:auto"> Telehealth</label></div>
