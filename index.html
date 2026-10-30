@@ -88,7 +88,7 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:2rem 1rem}
     <a href="#/specialty/emdr/frisco" data-nav="/specialty/emdr/frisco">EMDR</a>
     <a href="#/specialty/play-therapy/mckinney" data-nav="/specialty/play-therapy/mckinney">Play therapy</a>
     <a href="#/saved" data-nav="/saved">Saved (<span id="savedCount">0</span>)</a>
-    <a href="#/join" data-nav="/join">For practices</a>
+    <a href="#/join" data-nav="/join">Join / Claim</a>
   </nav>
 </header>
 <main id="app" tabindex="-1"></main>
@@ -400,6 +400,46 @@ saved(){
   <h2>Requests on this device (${reqs.length})</h2>${reqs.map(r=>`<div class="card"><b>${esc(r.toName)}</b> · ${new Date(r.at).toLocaleString()}<br><span class="muted">${esc(r.routedTo?"Routed to "+r.routedTo:"Practice will choose a clinician")}</span></div>`).join("")||'<p class="muted">None.</p>'}
   ${pageFoot()}`;
 },
+joinHub(){
+  return homeBar()+`<section class="card"><h1 style="margin-top:0">Join or claim a listing</h1>
+  <p class="muted">Demo only — saved on this device, not live listings yet.</p>
+  <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+   <div class="card"><h2 style="margin-top:0">I'm a group</h2><p>One practice page: team roster, multiple locations, shared intake.</p><button type="button" class="btn" onclick="navigate('/join/group',{});return false;">Start group signup</button></div>
+   <div class="card"><h2 style="margin-top:0">I'm a solo provider</h2><p>List yourself, or join a group later.</p><button type="button" class="btn" onclick="navigate('/join/solo',{});return false;">Start solo signup</button></div>
+  </div><p class="muted" style="margin-top:12px"><a href="#/join/request" onclick="navigate('/join/request',{});return false;">Just request a listing (short form)</a></p></section>${pageFoot()}`;
+},
+joinGroup(){
+  return homeBar()+`<section class="card"><h1 style="margin-top:0">Group practice signup</h1>
+  <div class="note">Sample/demo — not live listings yet. Saved in this browser only so Alex can review the flow before Firebase.</div>
+  <form id="groupForm" onsubmit="submitGroup(event)">
+   <h2>Practice info</h2>
+   <label>Practice name</label><input name="g-name" required>
+   <label>About</label><textarea name="g-about" rows="3"></textarea>
+   <label>Phone</label><input name="g-phone" type="tel">
+   <label>Website (optional)</label><input name="g-web" type="url">
+   <label>Insurance accepted</label><div>${INSURERS.map(i=>`<label style="display:inline-block;margin-right:12px"><input type="checkbox" class="g-ins" value="${esc(i)}"> ${esc(i)}</label>`).join("")}</div>
+   <label><input type="checkbox" name="g-intake" value="1" checked> Shared intake (one request routes to whoever is free)</label>
+   <h2>Locations</h2><div id="locRows"></div>
+   <button type="button" class="btn alt sm" onclick="addLocRow()">+ Add another location</button>
+   <h2>Providers</h2><div id="provRows"></div>
+   <button type="button" class="btn alt sm" onclick="addProvRow()">+ Add provider</button>
+   <div class="page-actions"><button type="submit" class="btn">Save group (demo)</button>
+   <button type="button" class="btn alt" onclick="navigate('/join',{});return false;">← Back</button></div>
+  </form><div id="groupResult" aria-live="polite"></div></section>${pageFoot()}`;
+},
+joinSolo(){
+  return homeBar()+`<section class="card"><h1 style="margin-top:0">Solo provider signup</h1>
+  <div class="note">Short stub — full solo profile comes next. Saved in this browser only.</div>
+  <form id="soloForm" onsubmit="submitSolo(event)">
+   <label>Name</label><input name="name" required>
+   <label>Credentials</label><input name="cred" placeholder="LPC, MD, PMHNP…">
+   <label>Provider type</label><select name="type"><option value="therapist">Therapist</option><option value="psychiatrist">Psychiatrist</option></select>
+   <label>City</label><select name="city">${cityOpts("","Choose…")}</select>
+   <label>Email</label><input name="email" type="email" required>
+   <div class="page-actions"><button type="submit" class="btn">Save (demo)</button>
+   <button type="button" class="btn alt" onclick="navigate('/join',{});return false;">← Back</button></div>
+  </form><div id="soloResult" aria-live="polite"></div></section>${pageFoot()}`;
+},
 /* DIFFERENTIATOR 7: PRACTICE SIGN-UP */
 join(){
   return homeBar()+`<section class="card"><h1 style="margin-top:0">List your practice on ${esc(BRAND)}</h1>
@@ -505,6 +545,28 @@ function submitJoin(form){
     </div></div>`;
 }
 
+
+/* ===== JOIN / CLAIM (browser-only, key pp_signups) ===== */
+function addLocRow(){const w=document.getElementById("locRows");if(!w)return;const d=document.createElement("div");d.className="card loc-row";
+ d.innerHTML=`<label>Address</label><input class="l-addr" required><label>City</label><select class="l-city">${Object.keys(CITY_DATA).map(k=>`<option value="${k}">${esc(CITY_DATA[k][0])}</option>`).join("")}</select>
+ <label>State</label><input class="l-state" value="TX" readonly><label>Phone (optional)</label><input class="l-phone" type="tel">
+ <label><input type="checkbox" class="l-tele"> Telehealth offered</label> <button type="button" class="btn alt sm" onclick="this.closest('.loc-row').remove()">Remove</button>`;w.appendChild(d)}
+function addProvRow(){const w=document.getElementById("provRows");if(!w)return;const d=document.createElement("div");d.className="card prov-row";
+ d.innerHTML=`<label>Name</label><input class="p-name"><label>Credentials</label><input class="p-cred" placeholder="LPC, LCSW, MD…">
+ <label>Provider type</label><select class="p-type"><option value="therapist">Therapist</option><option value="psychiatrist">Psychiatrist</option></select>
+ <label>Specialties</label><div>${Object.entries(SPECIALTIES).map(([k,v])=>`<label style="display:inline-block;margin-right:10px"><input type="checkbox" class="p-spec" value="${k}"> ${esc(v)}</label>`).join("")}</div>
+ <label>Invite email (optional)</label><input class="p-email" type="email"> <button type="button" class="btn alt sm" onclick="this.closest('.prov-row').remove()">Remove</button>`;w.appendChild(d)}
+function submitGroup(e){e.preventDefault();const f=e.target,v=n=>(f.querySelector(`[name="${n}"]`)||{}).value||"";
+ const g={kind:"group",at:Date.now(),name:v("g-name").trim(),about:v("g-about").trim(),phone:v("g-phone").trim(),website:v("g-web").trim(),
+  insurance:[...f.querySelectorAll(".g-ins:checked")].map(x=>x.value),sharedIntake:f.querySelector('[name="g-intake"]').checked,
+  locations:[...f.querySelectorAll(".loc-row")].map(r=>({address:r.querySelector(".l-addr").value.trim(),city:r.querySelector(".l-city").value,state:"TX",phone:r.querySelector(".l-phone").value.trim(),telehealth:r.querySelector(".l-tele").checked})),
+  providers:[...f.querySelectorAll(".prov-row")].map(r=>({name:r.querySelector(".p-name").value.trim(),credentials:r.querySelector(".p-cred").value.trim(),type:r.querySelector(".p-type").value,specialties:[...r.querySelectorAll(".p-spec:checked")].map(x=>x.value),inviteEmail:r.querySelector(".p-email").value.trim()})).filter(p=>p.name||p.inviteEmail)};
+ const all=LS.get("pp_signups",[]);all.push(g);LS.set("pp_signups",all);
+ document.getElementById("groupResult").innerHTML=`<div class="note"><b>Saved on this device (demo).</b> ${esc(g.name)} — ${g.locations.length} location(s), ${g.providers.length} provider(s), ${g.insurance.length} insurer(s).<ul>${g.locations.map(l=>`<li>${esc(l.address)}, ${esc((CITY_DATA[l.city]||[l.city])[0])}, TX${l.telehealth?" · telehealth":""}</li>`).join("")}${g.providers.map(p=>`<li>${esc(p.name||p.inviteEmail)} · ${esc(p.type)}${p.credentials?", "+esc(p.credentials):""}</li>`).join("")}</ul></div>`;f.style.display="none"}
+function submitSolo(e){e.preventDefault();const o=collectForm(e.target);o.kind="solo";o.at=Date.now();const all=LS.get("pp_signups",[]);all.push(o);LS.set("pp_signups",all);
+ document.getElementById("soloResult").innerHTML=`<div class="note"><b>Saved on this device (demo).</b> ${esc(o.name)} · ${esc(o.type)}. Full solo profile is coming next.</div>`;e.target.style.display="none"}
+Object.assign(window,{addLocRow,addProvRow,submitGroup,submitSolo});
+
 function route(){
   const path = (ROUTE_PATH || "/").replace(/^\//,"").split("/").filter(Boolean);
   const [a,b,c]=path; let html;
@@ -515,9 +577,13 @@ function route(){
   else if(a==="specialty"&&b&&c) html=views.specialty(b,c);
   else if(a==="request"&&b&&c) html=views.request(b,c);
   else if(a==="saved") html=views.saved();
-  else if(a==="join") html=views.join();
+  else if(a==="join"&&b==="group") html=views.joinGroup();
+  else if(a==="join"&&b==="solo") html=views.joinSolo();
+  else if(a==="join"&&b==="request") html=views.join();
+  else if(a==="join") html=views.joinHub();
   else html=views.notfound();
   $("#app").innerHTML=html;
+  if(document.getElementById("groupForm")){addLocRow();addProvRow();}
   updateCount();
   updateHomeBtn();
 }
