@@ -7,6 +7,7 @@
 <script defer data-domain="psych-alex.vercel.app" src="https://plausible.io/js/script.js"></script>
 <meta name="description" content="Psychiatric Provider: find therapists, psychiatrists, and group practices with verified openings. Prototype with sample data.">
 <meta name="theme-color" content="#1f6fa8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%231f6fa8%22/%3E%3Ctext x=%2216%22 y=%2222%22 font-family=%22Arial%22 font-size=%2215%22 font-weight=%22700%22 fill=%22%23fff%22 text-anchor=%22middle%22%3EPP%3C/text%3E%3C/svg%3E">
 <style>
 /* ===== THEME ===== */
 :root{--bg:#f5f8fb;--card:#fff;--ink:#1c2b3a;--muted:#5a6b7b;--brand:#1f6fa8;--brand2:#13808a;--soft:#e6f1f8;--warn:#9a5b00;--warnbg:#fff4e0;--ok:#1e6b3a;--okbg:#e4f5ea;--line:#d9e3ec;--r:10px}
@@ -65,7 +66,7 @@ label{display:block;margin:.6rem 0 .2rem;font-weight:600;font-size:.92rem}
 .success{background:var(--okbg);border-left:4px solid var(--ok);padding:.75rem;border-radius:6px}
 .team{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.6rem}
 footer{text-align:center;color:var(--muted);font-size:.85rem;padding:2rem 1rem}
-.homebar{display:flex;gap:.5rem;align-items:center;margin:0 0 .75rem;position:sticky;top:2.6rem;z-index:15;background:var(--bg);padding:.4rem 0}
+.homebar{display:flex;gap:.5rem;align-items:center;margin:0 0 .75rem;position:sticky;top:var(--crisis-h,2.6rem);z-index:15;background:var(--bg);padding:.4rem 0}
 .homebar .btn{box-shadow:0 1px 0 #0001}
 .homebar .spacer{flex:1}
 .page-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin:1.25rem 0 .5rem}
@@ -74,7 +75,9 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:2rem 1rem}
 .how{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.4rem;padding:0;margin:.5rem 0 .75rem;font-size:.92rem}
 .how li{background:rgba(255,255,255,.75);border:1px solid #cfe3ea;border-radius:8px;padding:.45rem .6rem}
 .livematch{display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;align-items:end;margin:.5rem 0 1rem;padding:.75rem;border:1px solid #cfe3ea;border-radius:10px;background:#fff}
-.livematch label{display:block;font-size:.8rem;font-weight:600}
+.livematch label{display:block;font-size:.8rem;font-weight:600;color:var(--ink);margin:0 0 .2rem}
+.livematch select{width:100%;padding:.45rem;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+@media(max-width:420px){.livematch{grid-template-columns:1fr!important}}
 @media(max-width:560px){.livematch{grid-template-columns:1fr 1fr}.livematch .btn{grid-column:1/-1}.how{grid-template-columns:1fr}}
 </style>
 </head>
@@ -164,6 +167,19 @@ const CLINICIANS = [
  {"id": "leah-rinaldi", "name": "Leah Rinaldi", "cred": "LPC-S", "practice": null, "city": "lewisville", "specialties": ["anxiety", "emdr", "trauma"], "insurance": ["Medicaid", "UnitedHealthcare", "Self-pay"], "langs": ["English", "Spanish"], "telehealth": false, "nextOpening": "2026-11-14", "lastConfirmed": "2026-10-23", "bio": "Practical tools for anxiety, panic, and overthinking. EMDR for trauma and stuck memories, paced at your speed."},
  {"id": "isaac-ramos", "name": "Isaac Ramos", "cred": "LMHC", "practice": null, "city": "san-antonio", "specialties": ["play-therapy", "depression", "medication"], "insurance": ["Aetna", "Self-pay", "Cigna"], "langs": ["English"], "telehealth": false, "nextOpening": "2026-11-26", "lastConfirmed": "2026-07-27", "bio": "Play therapy for kids 3\u201312 with parent check-ins. Warm, steady therapy for depression and burnout."}
 ];
+
+/* Sample dates were written on 2026-10-29. Shift them by the days since then so the demo
+   always reads as current (no "next opening" in the past) while keeping the same mix of
+   fresh and stale (>30 days) listings. */
+const SAMPLE_ANCHOR = "2026-10-29";
+(function shiftSampleDates(){
+  const d0 = new Date(SAMPLE_ANCHOR+"T12:00:00"), t0 = new Date(TODAY); t0.setHours(12,0,0,0);
+  const days = Math.max(0, Math.round((t0 - d0)/864e5));
+  if(!days) return;
+  const pad = n => String(n).padStart(2,"0");
+  const shift = iso => { if(!iso) return iso; const t = new Date(iso+"T12:00:00"); t.setDate(t.getDate()+days); return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`; };
+  CLINICIANS.forEach(c => { c.nextOpening = shift(c.nextOpening); c.lastConfirmed = shift(c.lastConfirmed); });
+})();
 
 /* ===== STORAGE (localStorage only) ===== */
 const LS = {
@@ -278,7 +294,7 @@ home(){
     <select name="specialty" aria-label="Specialty">${opts(SPECIALTIES,"","any specialty")}</select>
    </div>
    <div class="line">in
-    <select name="state" aria-label="State">${opts(STATES,"","Texas")}</select>
+    <select name="state" aria-label="State">${Object.entries(STATES).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select>
     <select name="city" aria-label="City">${cityOpts("","any city")}</select>
    </div>
    <div class="line">that takes
@@ -673,7 +689,8 @@ function updateHomeBtn(){
   const btn = document.getElementById("homeBtn");
   if(!btn) return;
   const onHome = !ROUTE_PATH || ROUTE_PATH === "/";
-  btn.style.display = onHome ? "none" : "inline-flex";
+  const hasBar = !!document.querySelector("#app .homebar");
+  btn.style.display = (onHome || hasBar) ? "none" : "inline-flex";
 }
 
 document.addEventListener("click", function(e){
@@ -762,6 +779,9 @@ document.title = BRAND + " — Find therapists, psychiatrists & group practices"
 $("#logo").textContent = BRAND;
 window.addEventListener("hashchange", () => { syncFromHash(); route(); try{ if(typeof window.scrollTo==="function") window.scrollTo(0,0);}catch(e){} });
 window.addEventListener("popstate", () => { syncFromHash(); route(); });
+/* Keep the sticky page bar just below the 988 banner, which wraps to 2+ lines on phones. */
+function syncCrisisHeight(){ const c=document.querySelector(".crisis"); if(c) document.documentElement.style.setProperty("--crisis-h", c.offsetHeight+"px"); }
+syncCrisisHeight(); window.addEventListener("resize", syncCrisisHeight);
 syncFromHash();
 updateCount();
 route();
